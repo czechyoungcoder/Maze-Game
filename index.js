@@ -193,23 +193,25 @@ const ball = Bodies.circle(unitLengthX / 2, unitLengthY / 2, ballRadius, {
 });
 World.add(world, ball);
 
+const maxSpeed = 5;
 document.addEventListener("keydown", (event) => {
   const { x, y } = ball.velocity;
 
   if (event.key === "w" || event.key === "ArrowUp") {
-    Body.setVelocity(ball, { x, y: y - 5 });
+    Body.setVelocity(ball, { x, y: Math.max(y - 5, -maxSpeed) });
+    console.log(y);
   }
 
   if (event.key === "d" || event.key === "ArrowRight") {
-    Body.setVelocity(ball, { x: x + 5, y });
+    Body.setVelocity(ball, { x: Math.min(x + 5, maxSpeed), y });
   }
 
   if (event.key === "s" || event.key === "ArrowDown") {
-    Body.setVelocity(ball, { x, y: y + 5 });
+    Body.setVelocity(ball, { x, y: Math.min(y + 5, maxSpeed) });
   }
 
   if (event.key === "a" || event.key === "ArrowLeft") {
-    Body.setVelocity(ball, { x: x - 5, y });
+    Body.setVelocity(ball, { x: Math.max(x - 5, -maxSpeed), y });
   }
 });
 
