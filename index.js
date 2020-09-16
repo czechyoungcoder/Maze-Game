@@ -199,7 +199,6 @@ document.addEventListener("keydown", (event) => {
 
   if (event.key === "w" || event.key === "ArrowUp") {
     Body.setVelocity(ball, { x, y: Math.max(y - 5, -maxSpeed) });
-    console.log(y);
   }
 
   if (event.key === "d" || event.key === "ArrowRight") {
