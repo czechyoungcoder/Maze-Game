@@ -1,7 +1,16 @@
 const container = document.querySelector(".container");
 const button = document.querySelector(".btn-start");
 
+let engine;
+let world;
+let render;
+
 const generateMaze = (cellsVertical, cellsHorizontal) => {
+  if (engine) {
+    Matter.World.clear(world);
+    Matter.Engine.clear(engine);
+  }
+
   const { body } = document;
   body.querySelector("canvas") ? body.removeChild(body.querySelector("canvas")) : "";
 
@@ -81,9 +90,9 @@ const generateMaze = (cellsVertical, cellsHorizontal) => {
   const unitLengthX = width / cellsHorizontal;
   const unitLengthY = height / cellsVertical;
 
-  const engine = Engine.create();
+  engine = Engine.create();
   engine.world.gravity.y = 0;
-  const { world } = engine;
+  world = engine.world;
   const render = Render.create({
     element: document.body,
     engine: engine,
