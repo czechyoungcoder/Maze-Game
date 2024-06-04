@@ -1,233 +1,284 @@
-const { Engine, Render, Runner, World, Bodies, Body, Events } = Matter;
+const container = document.querySelector(".container");
+const button = document.querySelector(".btn-start");
 
-const cellsHorizontal = 10;
-const cellsVertical = 8;
-const width = window.innerWidth;
-const height = window.innerHeight;
+let engine;
+let world;
+let render;
 
-const unitLengthX = width / cellsHorizontal;
-const unitLengthY = height / cellsVertical;
-
-const engine = Engine.create();
-engine.world.gravity.y = 0;
-const { world } = engine;
-const render = Render.create({
-  element: document.body,
-  engine: engine,
-  options: {
-    wireframes: false,
-    width,
-    height,
-  },
-});
-Render.run(render);
-Runner.run(Runner.create(), engine);
-
-// Walls
-
-const walls = [
-  Bodies.rectangle(width / 2, 0, width, 2, { isStatic: true }),
-  Bodies.rectangle(width / 2, height, width, 2, { isStatic: true }),
-  Bodies.rectangle(0, height / 2, 2, height, { isStatic: true }),
-  Bodies.rectangle(width, height / 2, 2, height, { isStatic: true }),
-];
-
-World.add(world, walls);
-
-// Maze generation
-
-const shuffle = (arr) => {
-  let counter = arr.length;
-
-  while (counter > 0) {
-    const index = Math.floor(Math.random() * counter);
-
-    counter--;
-
-    const temp = arr[counter];
-    arr[counter] = arr[index];
-    arr[index] = temp;
+const generateMaze = (cellsVertical, cellsHorizontal) => {
+  if (engine) {
+    Matter.World.clear(world);
+    Matter.Engine.clear(engine);
   }
 
-  return arr;
-};
+  const { body } = document;
+  body.querySelector("canvas") ? body.removeChild(body.querySelector("canvas")) : "";
 
-const grid = Array(cellsVertical)
-  .fill(null)
-  .map(() => Array(cellsHorizontal).fill(false));
+  const { Engine, Render, Runner, World, Bodies, Body, Events } = Matter;
 
-const verticals = Array(cellsVertical)
-  .fill(null)
-  .map(() => Array(cellsHorizontal - 1).fill(false));
+  const shuffle = (arr) => {
+    let counter = arr.length;
 
-const horizontals = Array(cellsVertical - 1)
-  .fill(null)
-  .map(() => Array(cellsHorizontal).fill(false));
+    while (counter > 0) {
+      const index = Math.floor(Math.random() * counter);
 
-const startRow = Math.floor(Math.random() * cellsVertical);
-const startColumn = Math.floor(Math.random() * cellsHorizontal);
+      counter--;
 
-const stepThroughCell = (row, column) => {
-  // If I have visited the cell at [row, column], then return
-  if (grid[row][column]) {
-    return;
-  }
-
-  // Mark this cell as being visited
-  grid[row][column] = true;
-
-  // Assemble ramdomly-ordered list of neighbors
-  const neighbors = shuffle([
-    [row - 1, column, "up"],
-    [row, column + 1, "right"],
-    [row + 1, column, "down"],
-    [row, column - 1, "left"],
-  ]);
-
-  // For each neighbor...
-  for (let neighbor of neighbors) {
-    const [nextRow, nextColumn, direction] = neighbor;
-
-    // See if that neighbor is out of bonds
-    if (
-      nextRow < 0 ||
-      nextRow >= cellsVertical ||
-      nextColumn < 0 ||
-      nextColumn >= cellsHorizontal
-    ) {
-      continue;
+      const temp = arr[counter];
+      arr[counter] = arr[index];
+      arr[index] = temp;
     }
 
-    // If we have visited that neighbor, continue to the next neighbor
-    if (grid[nextRow][nextColumn]) {
-      continue;
+    return arr;
+  };
+
+  const stepThroughCell = (row, column) => {
+    // If I have visited the cell at [row, column], then return
+    if (grid[row][column]) {
+      return;
     }
 
-    // Remove a wall from either horizontals or verticals
-    if (direction === "left") {
-      verticals[row][column - 1] = true;
-    } else if (direction === "right") {
-      verticals[row][column] = true;
-    } else if (direction === "up") {
-      horizontals[row - 1][column] = true;
-    } else if (direction === "down") {
-      horizontals[row][column] = true;
-    }
+    // Mark this cell as being visited
+    grid[row][column] = true;
 
-    stepThroughCell(nextRow, nextColumn);
-  }
-  // Visit that next cell
-};
+    // Assemble ramdomly-ordered list of neighbors
+    const neighbors = shuffle([
+      [row - 1, column, "up"],
+      [row, column + 1, "right"],
+      [row + 1, column, "down"],
+      [row, column - 1, "left"],
+    ]);
 
-stepThroughCell(startRow, startColumn);
+    // For each neighbor...
+    for (let neighbor of neighbors) {
+      const [nextRow, nextColumn, direction] = neighbor;
 
-horizontals.forEach((row, rowIndex) => {
-  row.forEach((open, columnIndex) => {
-    if (open) return;
-
-    const wall = Bodies.rectangle(
-      columnIndex * unitLengthX + unitLengthX / 2,
-      rowIndex * unitLengthY + unitLengthY,
-      unitLengthX,
-      5,
-      {
-        label: "wall",
-        isStatic: true,
-        render: {
-          fillStyle: "red",
-        },
+      // See if that neighbor is out of bonds
+      if (
+        nextRow < 0 ||
+        nextRow >= cellsVertical ||
+        nextColumn < 0 ||
+        nextColumn >= cellsHorizontal
+      ) {
+        continue;
       }
-    );
 
-    World.add(world, wall);
-  });
-});
-
-verticals.forEach((row, rowIndex) => {
-  row.forEach((open, columnIndex) => {
-    if (open) return;
-
-    const wall = Bodies.rectangle(
-      columnIndex * unitLengthX + unitLengthX,
-      rowIndex * unitLengthY + unitLengthY / 2,
-      5,
-      unitLengthY,
-      {
-        label: "wall",
-        isStatic: true,
-        render: {
-          fillStyle: "red",
-        },
+      // If we have visited that neighbor, continue to the next neighbor
+      if (grid[nextRow][nextColumn]) {
+        continue;
       }
-    );
 
-    World.add(world, wall);
-  });
-});
+      // Remove a wall from either horizontals or verticals
+      if (direction === "left") {
+        verticals[row][column - 1] = true;
+      } else if (direction === "right") {
+        verticals[row][column] = true;
+      } else if (direction === "up") {
+        horizontals[row - 1][column] = true;
+      } else if (direction === "down") {
+        horizontals[row][column] = true;
+      }
 
-// Goal
+      stepThroughCell(nextRow, nextColumn);
+    }
+    // Visit that next cell
+  };
 
-const goal = Bodies.rectangle(
-  width - unitLengthX / 2,
-  height - unitLengthY / 2,
-  0.75 * unitLengthX,
-  0.75 * unitLengthY,
-  {
-    label: "goal",
-    isStatic: true,
-    render: {
-      fillStyle: "green",
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+
+  const unitLengthX = width / cellsHorizontal;
+  const unitLengthY = height / cellsVertical;
+
+  engine = Engine.create();
+  engine.world.gravity.y = 0;
+  world = engine.world;
+  const render = Render.create({
+    element: document.body,
+    engine: engine,
+    options: {
+      wireframes: false,
+      width,
+      height,
     },
-  }
-);
-World.add(world, goal);
+  });
+  Render.run(render);
+  Runner.run(Runner.create(), engine);
 
-// Ball
+  // Walls
 
-const ballRadius = Math.min(unitLengthX, unitLengthY) / 4;
-const ball = Bodies.circle(unitLengthX / 2, unitLengthY / 2, ballRadius, {
-  label: "ball",
-  render: {
-    fillStyle: "blue",
-  },
-});
-World.add(world, ball);
+  const walls = [
+    Bodies.rectangle(width / 2, 0, width, 2, { isStatic: true }),
+    Bodies.rectangle(width / 2, height, width, 2, { isStatic: true }),
+    Bodies.rectangle(0, height / 2, 2, height, { isStatic: true }),
+    Bodies.rectangle(width, height / 2, 2, height, { isStatic: true }),
+  ];
 
-const maxSpeed = 5;
-document.addEventListener("keydown", (event) => {
-  const { x, y } = ball.velocity;
+  World.add(world, walls);
 
-  if (event.key === "w" || event.key === "ArrowUp") {
-    Body.setVelocity(ball, { x, y: Math.max(y - 5, -maxSpeed) });
-  }
+  // Maze generation
 
-  if (event.key === "d" || event.key === "ArrowRight") {
-    Body.setVelocity(ball, { x: Math.min(x + 5, maxSpeed), y });
-  }
+  const grid = Array(cellsVertical)
+    .fill(null)
+    .map(() => Array(cellsHorizontal).fill(false));
 
-  if (event.key === "s" || event.key === "ArrowDown") {
-    Body.setVelocity(ball, { x, y: Math.min(y + 5, maxSpeed) });
-  }
+  const verticals = Array(cellsVertical)
+    .fill(null)
+    .map(() => Array(cellsHorizontal - 1).fill(false));
 
-  if (event.key === "a" || event.key === "ArrowLeft") {
-    Body.setVelocity(ball, { x: Math.max(x - 5, -maxSpeed), y });
-  }
-});
+  const horizontals = Array(cellsVertical - 1)
+    .fill(null)
+    .map(() => Array(cellsHorizontal).fill(false));
 
-// Win Condition
+  const startRow = Math.floor(Math.random() * cellsVertical);
+  const startColumn = Math.floor(Math.random() * cellsHorizontal);
 
-Events.on(engine, "collisionStart", (event) => {
-  event.pairs.forEach((collision) => {
-    const labels = ["ball", "goal"];
+  stepThroughCell(startRow, startColumn);
 
-    if (labels.includes(collision.bodyA.label) && labels.includes(collision.bodyB.label)) {
-      document.querySelector(".winner").classList.remove("hidden");
-      engine.world.gravity.y = 1;
-      world.bodies.forEach((body) => {
-        if (body.label === "wall") {
-          Body.setStatic(body, false);
+  horizontals.forEach((row, rowIndex) => {
+    row.forEach((open, columnIndex) => {
+      if (open) return;
+
+      const wall = Bodies.rectangle(
+        columnIndex * unitLengthX + unitLengthX / 2,
+        rowIndex * unitLengthY + unitLengthY,
+        unitLengthX,
+        5,
+        {
+          label: "wall",
+          isStatic: true,
+          render: {
+            fillStyle: "red",
+          },
         }
-      });
+      );
+
+      World.add(world, wall);
+    });
+  });
+
+  verticals.forEach((row, rowIndex) => {
+    row.forEach((open, columnIndex) => {
+      if (open) return;
+
+      const wall = Bodies.rectangle(
+        columnIndex * unitLengthX + unitLengthX,
+        rowIndex * unitLengthY + unitLengthY / 2,
+        5,
+        unitLengthY,
+        {
+          label: "wall",
+          isStatic: true,
+          render: {
+            fillStyle: "red",
+          },
+        }
+      );
+
+      World.add(world, wall);
+    });
+  });
+
+  // Goal
+  goalSize = Math.min(unitLengthX, unitLengthY);
+  const goal = Bodies.rectangle(
+    width - unitLengthX / 2,
+    height - unitLengthY / 2,
+    0.75 * goalSize,
+    0.75 * goalSize,
+    {
+      label: "goal",
+      isStatic: true,
+      render: {
+        fillStyle: "green",
+      },
+    }
+  );
+  World.add(world, goal);
+
+  // Ball
+
+  const ballRadius = Math.min(unitLengthX, unitLengthY) / 4;
+  const ball = Bodies.circle(unitLengthX / 2, unitLengthY / 2, ballRadius, {
+    label: "ball",
+    render: {
+      fillStyle: "blue",
+    },
+  });
+  World.add(world, ball);
+
+  const ballSpeed = 5;
+  document.addEventListener("keydown", (event) => {
+    const { x, y } = ball.velocity;
+
+    if (event.key === "w" || event.key === "ArrowUp") {
+      Body.setVelocity(ball, { x, y: Math.max(y - ballSpeed, -ballSpeed) });
+    }
+
+    if (event.key === "d" || event.key === "ArrowRight") {
+      Body.setVelocity(ball, { x: Math.min(x + ballSpeed, ballSpeed), y });
+    }
+
+    if (event.key === "s" || event.key === "ArrowDown") {
+      Body.setVelocity(ball, { x, y: Math.min(y + ballSpeed, ballSpeed) });
+    }
+
+    if (event.key === "a" || event.key === "ArrowLeft") {
+      Body.setVelocity(ball, { x: Math.max(x - ballSpeed, -ballSpeed), y });
     }
   });
+
+  // Win Condition
+
+  Events.on(engine, "collisionStart", (event) => {
+    event.pairs.forEach((collision) => {
+      console.log(event);
+      const labels = ["ball", "goal"];
+
+      if (labels.includes(collision.bodyA.label) && labels.includes(collision.bodyB.label)) {
+        console.log("why");
+        document.querySelector("canvas").classList.add("blur");
+        container.classList.remove("hidden");
+        engine.world.gravity.y = 1;
+        document.querySelectorAll("input").forEach((el) => {
+          el.disabled = false;
+        });
+        button.disabled = false;
+
+        world.bodies.forEach((body) => {
+          if (body.label === "wall") {
+            Body.setStatic(body, false);
+          }
+        });
+      }
+    });
+  });
+};
+
+const getChosenRadio = (name) => {
+  const radios = document.getElementsByName(name);
+
+  for (let i = 0; i < radios.length; i++) {
+    if (radios[i].checked) {
+      return radios[i];
+    }
+  }
+};
+
+document.querySelector(".btn-start").addEventListener("click", function () {
+  const columns = Number(document.querySelector("#columns").value);
+  const rows = Number(document.querySelector("#rows").value);
+  const difficulty = getChosenRadio("difficulty").value;
+  const theme = getChosenRadio("theme").value;
+
+  container.classList.add("hidden");
+  document.querySelectorAll("input").forEach((el) => {
+    el.disabled = true;
+  });
+  this.disabled = true;
+
+  generateMaze(columns, rows);
 });
+
+generateMaze(5, 5);
+document.querySelector("canvas").classList.add("blur");
